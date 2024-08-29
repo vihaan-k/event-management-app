@@ -5,34 +5,18 @@ from dotenv import load_dotenv
 from organizer import events, users
 from bson.objectid import ObjectId
 from streamlit import session_state as ss, chat_message as msg, markdown as md, chat_input as inp
-import logging
 
-def main():    
+def main() -> None:    
     """Main function which runs all other functions"""
-    setup_logging()
     init_chat_history()
     display()
-    chat(get_attendee_events('66b1729026d2550a25e8a671'))
+    try:
+        list_events, number_of_attendee_events = get_events('66b1729026d2550a25e8a671')
+    except TypeError:
+        return
+    chat(choose_event(list_events, number_of_attendee_events))
 
-def setup_logging():
-    """Setting up logging for the website. Logging happens into the console"""
-
-    # Create a logger
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    # Create a handler and set its level to DEBUG
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
-
-    # Create a formatter and set it for the console handler
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
-
-    # Add the console handler to the logger
-    logger.addHandler(handler)
-
-def get_response(prompt):
+def get_response(prompt: str) -> str:
     """Getting response from ChatGPT"""
 
     load_dotenv(".env")
@@ -49,7 +33,7 @@ def get_response(prompt):
     )
     return response.choices[0].message.content.strip()
 
-def init_chat_history():
+def init_chat_history() -> None:
     """Initialize chat history"""
 
     if "messages" not in ss:
@@ -59,7 +43,7 @@ def init_chat_history():
     if "hidden_messages" not in ss:
         ss.hidden_messages = []
 
-def display():
+def display() -> None:
     """Configuring display."""
 
     st.title("Chatbot")
@@ -67,35 +51,36 @@ def display():
         with msg(message["role"]):
             md(message["content"])
 
-def get_attendee_events(user_id):
-    logger = logging.getLogger(__name__)
+def get_events(user_id: str) -> tuple:
+    user_email = users.find_one({"_id":ObjectId(user_id)}).get("email")
+    attendee_events = {}
 
+    for event in events.find():
+        if user_email in event.get("attendees", []):
+            attendee_events[event.get("event name")] = event.get("organizer")
+
+    if not attendee_events:
+        ss.messages.append({"role":"assistant","content":"No events planned for you"})
+        with msg("assistant"):
+            md("No events planned for you")
+        return
+    
+    list_events = "Here are the list of events planned for you: "
+    for nr, event in enumerate(attendee_events, start=1):
+        organizer = users.find_one({"_id": ObjectId(attendee_events.get(event))})
+        full_name = organizer.get("firstName") + " " + organizer.get("lastName")
+        list_events += f"\n{nr}) name: {event}, organizer: {full_name}."
+    
+    return list_events, len(attendee_events)
+
+def choose_event(list_events: list, number_of_attendee_events: int) -> int:
     if "error_msg" not in ss:
         ss.error_msg = True
 
     if ss.error_msg:
-        user_email = users.find_one({"_id":ObjectId(user_id)}).get("email")
-        attendee_events = []
-
-        for event in events.find():
-            if user_email in event.get("attendees", []):
-                attendee_events.append([event.get("event name"), event.get("organizer")])
-        
-        if not attendee_events:
-            with msg("assistant"):
-                md("No events planned for you")
-            ss.messages.append({"role":"assistant","content":"No events planned for you"})
-            return
-        
-        list_events = "Here are the list of events planned for you: "
-        for nr, event in enumerate(attendee_events, start=1):
-            organizer = users.find_one({"_id": ObjectId(event[1])})
-            full_name = organizer.get("firstName") + " " + organizer.get("lastName")
-            list_events += f"\n{nr}) name: {event[0]}, organizer: {full_name}."
-
         with msg("assistant"):
-            md(list_events) 
-            md("Please enter the number of the event that you want the info of.")
+            prompt_event = st.empty()
+            prompt_event.markdown(list_events + "\n\nPlease enter the number of the event that you want the info of.") 
 
         ss.event_nr = inp("Enter the event number here: ")
         if ss.event_nr:
@@ -103,26 +88,28 @@ def get_attendee_events(user_id):
                 md(ss.event_nr)
             ss.messages.append({"role":"assistant","content":list_events})
             ss.messages.append({"role":"user","content":ss.event_nr})
+
+            print(ss.event_nr)
         
             try:
-                if not 1 <= int(ss.event_nr) <= len(attendee_events):
+                if not 1 <= int(ss.event_nr) <= number_of_attendee_events:
                     ss.error_msg = f"Error: Number out of range."
                 else:
                     ss.error_msg = None
             except Exception as e:
                 ss.error_msg = f"Error: {e}"
-            logger.info(str(ss.error_msg))
         
         if ss.error_msg is not True:
-            with msg("assistant"):
-                md(ss.error_msg)
             ss.messages.append({"role":"assistant","content":ss.error_msg})
+            with msg("assistant"):
+                error_msg = st.empty()
+                error_msg.markdown(ss.error_msg)
 
         return
 
     return ss.event_nr
     
-def chat(id):
+def chat(id: ObjectId) -> None:
     """Chat with the chatbot and get info about an event"""
 
     if not id:
