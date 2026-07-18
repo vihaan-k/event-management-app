@@ -11,10 +11,10 @@ def main() -> None:
     init_chat_history()
     display()
     try:
-        list_events, number_of_attendee_events = get_events('66b1729026d2550a25e8a671')
+        attendee_events, number_of_attendee_events = get_events('66b1729026d2550a25e8a671')
     except TypeError:
         return
-    chat(choose_event(list_events, number_of_attendee_events))
+    chat(choose_event(attendee_events, number_of_attendee_events))
 
 def get_response(prompt: str) -> str:
     """Getting response from ChatGPT"""
@@ -51,13 +51,13 @@ def display() -> None:
         with msg(message["role"]):
             md(message["content"])
 
-def get_events(user_id: str) -> tuple:
+def get_events(user_id: str) -> tuple[list[list[str]], int]:
     user_email = users.find_one({"_id":ObjectId(user_id)}).get("email")
-    attendee_events = {}
+    attendee_events = []
 
     for event in events.find():
         if user_email in event.get("attendees", []):
-            attendee_events[event.get("event name")] = event.get("organizer")
+            attendee_events.append([event.get("event name"), event.get("organizer")]) 
 
     if not attendee_events:
         ss.messages.append({"role":"assistant","content":"No events planned for you"})
@@ -65,31 +65,35 @@ def get_events(user_id: str) -> tuple:
             md("No events planned for you")
         return
     
-    list_events = "Here are the list of events planned for you: "
-    for nr, event in enumerate(attendee_events, start=1):
-        organizer = users.find_one({"_id": ObjectId(attendee_events.get(event))})
-        full_name = organizer.get("firstName") + " " + organizer.get("lastName")
-        list_events += f"\n{nr}) name: {event}, organizer: {full_name}."
-    
-    return list_events, len(attendee_events)
+    return attendee_events, len(attendee_events)
 
-def choose_event(list_events: list, number_of_attendee_events: int) -> int:
+def choose_event(attendee_events: list[list[str]], number_of_attendee_events: int) -> int:
     if "error_msg" not in ss:
         ss.error_msg = True
 
-    if ss.error_msg:
+    if ss.error_msg is True:
+        list_events = "Here are the list of events planned for you: "
+        for nr, event in enumerate(attendee_events, start=1):
+            organizer = users.find_one({"_id": ObjectId(event[1])})
+            full_name = organizer.get("firstName") + " " + organizer.get("lastName")
+            list_events += f"\n{nr}) name: {event[0]}, organizer: {full_name}."
+
         with msg("assistant"):
             prompt_event = st.empty()
-            prompt_event.markdown(list_events + "\n\nPlease enter the number of the event that you want the info of.") 
+            prompt_event.markdown(list_events + "\n\nPlease enter the number of "
+                            "the event that you want the info of.") 
 
-        ss.event_nr = inp("Enter the event number here: ")
+        ss.event_nr = ""
+        while not ss.event_nr:
+            i = 1
+            ss.event_nr = inp("Enter the event number here: ", key=f"event_nr{i}")
+            i += 1
+        
         if ss.event_nr:
-            with msg("user"):
-                md(ss.event_nr)
             ss.messages.append({"role":"assistant","content":list_events})
             ss.messages.append({"role":"user","content":ss.event_nr})
-
-            print(ss.event_nr)
+            with msg("user"):
+                md(ss.event_nr)
         
             try:
                 if not 1 <= int(ss.event_nr) <= number_of_attendee_events:
@@ -99,19 +103,18 @@ def choose_event(list_events: list, number_of_attendee_events: int) -> int:
             except Exception as e:
                 ss.error_msg = f"Error: {e}"
         
-        if ss.error_msg is not True:
-            ss.messages.append({"role":"assistant","content":ss.error_msg})
-            with msg("assistant"):
-                error_msg = st.empty()
-                error_msg.markdown(ss.error_msg)
+    if ss.error_msg and ss.error_msg is not True:
+        ss.messages.append({"role":"assistant","content":ss.error_msg})
+        with msg("assistant"):
+            error_msg = st.empty()
+            error_msg.markdown(f"{ss.error_msg}\n\n{list_events}\n\nPlease enter the number of "
+                        "the event that you want the info of.")
+            return
+        
+    return events.find_one({"event name": attendee_events[int(ss.event_nr) - 1][0]}).get("_id")
 
-        return
-
-    return ss.event_nr
-    
-def chat(id: ObjectId) -> None:
+def chat(id: ObjectId|None) -> None:
     """Chat with the chatbot and get info about an event"""
-
     if not id:
         return
 
