@@ -1,0 +1,10 @@
+.venv
+.env
+/__pycache__/
+test.py
+functions.txt
+.log
+.sesskey
+.txt
+ui.py
+/ui/
