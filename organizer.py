@@ -150,7 +150,7 @@ The object should meet the following criteria:
 
 If for some event details the value is an empty string, build a 'questions' JSON array 
 in vector form of questions for those details. 
-Don't inlcude questions of the details that are already present. 
+Don't include questions of the details that are already present. 
 
 The array must be in vector form. Avoid nested arrays.
 
