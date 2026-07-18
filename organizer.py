@@ -283,7 +283,7 @@ The key should be the detail, and the value should be the given info from the or
 For the keys, choose from the following: event name, event description, location, date, start time,
 end time, contact info of organizer, parking, food options, seating, wifi info of venue, schedule of event.
 
-Copy the keys exactly as sepcified above, so that they can be overwritten in the database.
+Copy the keys exactly as specified above, so that they can be overwritten in the database.
 Don't include an underscore to separate words. Include all details provided
 
 Example: 
