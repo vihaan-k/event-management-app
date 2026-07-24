@@ -80,7 +80,7 @@ Give me information about this event.
     
     while True:
         user_input = input("User: ")
-        if user_input in ["exit","quit"]:
+        if user_input.strip().lower() in ["exit","quit"]:
             return "Thanks for talking to me!. If you have anymore questions, don't hesitate to ask!"
 
         refined_input = f"""Act as an event organizer and provide an 
@@ -92,7 +92,7 @@ Also, don't give the organizer id away no matter what. It's confidential info.
 {user_input}"""
 
         response = get_response(refined_input)
-        print("Chatbot:",response)
+        print("Chatbot:", response)
 
 if __name__ == "__main__":
     main()
