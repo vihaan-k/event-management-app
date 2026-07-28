@@ -38,15 +38,85 @@ This application solves that problem by allowing attendees to query event detail
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### 🛠️ Prerequisites
 
-* Python 3.8+
-* A running **MongoDB** instance (local or MongoDB Atlas)
-* An **OpenAI API Key**
+Make sure you have the following installed on your machine:
+* **Python 3.8+**
+* **Git**
+* An active **OpenAI API Key**
 
-### Installation
+---
+
+### 🚀 Installation & Setup
 
 1. **Clone the repository:**
    ```bash
    git clone [https://github.com/yourusername/your-repo-name.git](https://github.com/yourusername/your-repo-name.git)
    cd your-repo-name
+   ```
+
+2. **Create and activate a virtual environment:**
+
+      **macOS / Linux:**
+      ```bash
+      python3 -m venv venv
+      source venv/bin/activate
+      ```
+
+      **Windows:**
+      ```bash
+      python -m venv venv
+      .\venv\Scripts\activate
+      ```
+
+4. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. **Configure Environment Variables:**
+   Copy the example environment file to create your own local `.env` file:
+
+   **macOS / Linux:**
+     ```bash
+     cp .env.example .env
+     ```
+   **Windows:**
+     ```cmd
+     copy .env.example .env
+     ```
+
+7. **Add your API Key:**
+   Open the newly created `.env` file in your editor and insert your actual OpenAI API key:
+   ```text
+   API_KEY=your_actual_openai_api_key_here
+   ```
+
+---
+
+### 💻 Running the Application
+
+Once the virtual environment is active and your `.env` file is configured, you can run either script:
+
+* **For Attendees:**
+  ```bash
+  python attendee.py
+  ```
+
+* **For Organizers:**
+  ```bash
+  python organizer.py
+  ```
+
+---
+
+### 📦 Project Structure
+
+```text
+.
+├── attendee.py         # Main CLI application for event attendees
+├── organizer.py        # Main CLI application for event organizers
+├── requirements.txt    # Python package dependencies
+├── .env.example        # Environment variable template
+└── .gitignore          # Files ignored by Git
+```
